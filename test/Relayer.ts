@@ -71,7 +71,8 @@ describe("Relayer", function () {
       const { relayer } = await loadFixture(deployContractFixture);
       const maxPriorityFee = await relayer.maxPriorityFee();
 
-      const random_address = ethers.Wallet.createRandom().address;
+      // This address is not relevant
+      const random_address = relayer.address;
 
       await expect(relayer.execute(random_address, '0x', {'maxPriorityFeePerGas': maxPriorityFee.add(1)})).to.be.revertedWith(
         "maxPriorityFee is higher than expected"

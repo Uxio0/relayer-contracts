@@ -1,4 +1,11 @@
 {
+  "name": "relayer-contracts",
+  "version": "1.0.0",
+  "description": "Relayer contracts for Gnosis Safe",
+  "main": "index.js",
+  "repository": "git@github.com:Uxio0/relayer-contracts.git",
+  "author": "Uxío",
+  "license": "MIT",
   "devDependencies": {
     "@ethersproject/abi": "^5.4.7",
     "@ethersproject/providers": "^5.4.7",
