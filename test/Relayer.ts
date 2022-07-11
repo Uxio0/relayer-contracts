@@ -67,7 +67,18 @@ describe("Relayer", function () {
       expect(await erc20Token.balanceOf(otherAccount.address)).to.equal(amount);
     });
 
-    it("Should rely a Safe transaction", async function () {
+    it("Should not relay when exceeding maxPriorityFee", async function () {
+      const { relayer } = await loadFixture(deployContractFixture);
+      const maxPriorityFee = await relayer.maxPriorityFee();
+
+      const random_address = ethers.Wallet.createRandom().address;
+
+      await expect(relayer.execute(random_address, '0x', {'maxPriorityFeePerGas': maxPriorityFee.add(1)})).to.be.revertedWith(
+        "maxPriorityFee is higher than expected"
+      );
+    });
+
+    it("Should relay a Safe transaction", async function () {
       const { relayer, erc20Token, owner, otherAccount } = await loadFixture(deployContractFixture);
       const GnosisSafe = await ethers.getContractFactory("ExampleGnosisSafe");
       const gnosisSafe = await GnosisSafe.deploy({'gasLimit': 10000000});
@@ -79,17 +90,16 @@ describe("Relayer", function () {
       );
 
       // Send some ether to the Safe
-      let amount = 23
-      expect(await ethers.provider.getBalance(gnosisSafe.address)).to.equal(0);
-      await owner.sendTransaction({to: gnosisSafe.address, value: amount})
-      expect(await ethers.provider.getBalance(gnosisSafe.address)).to.equal(amount);
+      let amount = ethers.utils.parseEther('1');
+      await expect(await owner.sendTransaction({to: gnosisSafe.address, value: amount})).to.changeEtherBalance(gnosisSafe.address, amount);
 
       // Send payment tokens to the Safe
       await erc20Token.transfer(gnosisSafe.address, ethers.utils.parseEther('1'));
 
-      // Send ether out using the relayer
+      // Craft Safe Tx to send ether out
+      let amountToSend = ethers.BigNumber.from(23);
       let transactionHash = await gnosisSafe.getTransactionHash(
-        otherAccount.address, amount, '0x', 0, 0,
+        otherAccount.address, amountToSend, '0x', 0, 0,
         0, 0, ethers.constants.AddressZero, ethers.constants.AddressZero, 0
       );
 
@@ -99,7 +109,7 @@ describe("Relayer", function () {
       signature = signature.slice(0, -2) + v.toString(16)
 
       let { data } = await gnosisSafe.populateTransaction.execTransaction(
-        otherAccount.address, amount, '0x', 0, 0,
+        otherAccount.address, amountToSend, '0x', 0, 0,
         0, 0, ethers.constants.AddressZero, ethers.constants.AddressZero, signature
       )
 
@@ -109,12 +119,21 @@ describe("Relayer", function () {
         "ERC20: insufficient allowance"
       );
 
-      //TODO It needs to be approved from the Safe
-      erc20Token.approve(relayer.address, ethers.utils.parseEther('1'))
+      // Approve token from the Safe (impersonating)
+      await ethers.provider.send("hardhat_impersonateAccount", [gnosisSafe.address]);
+      const safeSigner = await ethers.provider.getSigner(gnosisSafe.address);
+      await erc20Token.connect(safeSigner).approve(relayer.address, ethers.utils.parseEther('1'))
 
-      await expect(relayer.execute(gnosisSafe.address, dataWithoutMethod)).to.emit(
-        erc20Token, 'Transfer'
-      );
+      // If transaction is executed and relayed, `amountToSend` ether will be sent from Safe to `otherAccount`
+      await expect(await relayer.execute(gnosisSafe.address, dataWithoutMethod)).to.emit(
+          erc20Token, 'Transfer'
+        ).to.changeEtherBalances([gnosisSafe.address, otherAccount.address], [-amountToSend, amountToSend]);
+
+      // If Safe transaction is not valid, everything should revert and no funds must be transferred
+      // Use same transaction again
+      await expect(relayer.execute(gnosisSafe.address, dataWithoutMethod)).to.be.revertedWith(
+        "Could not successfully call target"
+      )
     });
   });
 });
