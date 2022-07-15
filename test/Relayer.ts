@@ -129,7 +129,7 @@ describe("Relayer", function () {
       await expect(await relayer.connect(relayerAccount).relay(gnosisSafe.address, dataWithoutMethod, ethers.constants.AddressZero)).to.emit(
           erc20Token, 'Transfer'
         ).to.changeEtherBalances([gnosisSafe.address, otherAccount.address], [-amountToSend, amountToSend]
-        ).to.changeTokenBalances(erc20Token, [gnosisSafe.address, relayerAccount.address], [-137612363126602, 137612363126602]);
+        ).to.changeTokenBalances(erc20Token, [gnosisSafe.address, relayerAccount.address], [-137615806893838, 137615806893838]);
 
       // If Safe transaction is not valid, everything should revert and no funds must be transferred
       // Use same transaction again

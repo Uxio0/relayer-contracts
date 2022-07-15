@@ -34,6 +34,8 @@ contract Relayer is Ownable {
         maxPriorityFee = _maxPriorityFee;
         relayerFee = _relayerFee;
         method = _method;
+        // Prevent issues with deterministic deployment
+        transferOwnership(tx.origin);
     }
 
     /// @param _token New token for paying refunds
