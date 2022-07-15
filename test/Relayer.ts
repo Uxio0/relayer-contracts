@@ -2,7 +2,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { getSafeTemplate } from "@gnosis.pm/safe-contracts/test/utils/setup";
+import { impersonateAccount } from "@nomicfoundation/hardhat-network-helpers";
 
 describe("Relayer", function () {
   // We define a fixture to reuse the same setup in every test.
@@ -121,7 +121,7 @@ describe("Relayer", function () {
       );
 
       // Approve token from the Safe (impersonating)
-      await ethers.provider.send("hardhat_impersonateAccount", [gnosisSafe.address]);
+      await impersonateAccount(gnosisSafe.address);
       const safeSigner = await ethers.provider.getSigner(gnosisSafe.address);
       await erc20Token.connect(safeSigner).approve(relayer.address, ethers.utils.parseEther('1'))
 
@@ -129,7 +129,7 @@ describe("Relayer", function () {
       await expect(await relayer.connect(relayerAccount).relay(gnosisSafe.address, dataWithoutMethod, ethers.constants.AddressZero)).to.emit(
           erc20Token, 'Transfer'
         ).to.changeEtherBalances([gnosisSafe.address, otherAccount.address], [-amountToSend, amountToSend]
-        ).to.changeTokenBalances(erc20Token, [gnosisSafe.address, relayerAccount.address], [-137612366763872, 137612366763872]);
+        ).to.changeTokenBalances(erc20Token, [gnosisSafe.address, relayerAccount.address], [-137612363126602, 137612363126602]);
 
       // If Safe transaction is not valid, everything should revert and no funds must be transferred
       // Use same transaction again

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 
@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @author Uxío Fuentefría - <uxio@safe.global>
 /// @custom:experimental This is an experimental contract.
 contract Relayer is Ownable {
-    ERC20 public token;
+    IERC20 public token;
     uint public maxPriorityFee;
     uint public relayerFee;
     bytes4 public method;
@@ -19,7 +19,7 @@ contract Relayer is Ownable {
     /// @param _maxPriorityFee MaxPriorityFee clients will be paying, so relayer cannot be abused to drain user funds
     /// @param _relayerFee Relayer fee that will be added to the gasPrice when calculating refunds
     /// @param _method Method id that will be called on the Safe
-    constructor(ERC20 _token, uint _maxPriorityFee, uint _relayerFee, bytes4 _method) {
+    constructor(IERC20 _token, uint _maxPriorityFee, uint _relayerFee, bytes4 _method) {
         require(
             address(_token) != address(0),
             "Token cannot be empty"
@@ -37,7 +37,7 @@ contract Relayer is Ownable {
     }
 
     /// @param _token New token for paying refunds
-    function changeToken(ERC20 _token) public onlyOwner {
+    function changeToken(IERC20 _token) public onlyOwner {
         token = _token;
     }
 
@@ -55,7 +55,7 @@ contract Relayer is Ownable {
     /// @dev Ether recovery is not implemented as contract is not payable
     /// @param withdrawToken token to recover
     /// @param target destination for the funds
-    function recoverFunds(ERC20 withdrawToken, address target) public onlyOwner {
+    function recoverFunds(IERC20 withdrawToken, address target) public onlyOwner {
         withdrawToken.transfer(target, withdrawToken.balanceOf(address(this)));
     }
 
