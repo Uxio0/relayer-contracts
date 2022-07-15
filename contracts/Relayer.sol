@@ -55,11 +55,13 @@ contract Relayer is Ownable {
         ) external {
         // 9k are for the token transfers + 21k base + data (8 bytes method + 32 bytes address + data)
         // We will use 14 as the gas price per data byte, to avoid overcharging too much
+        uint256 gas = gasleft();
         uint256 txMaxPriorityFee = tx.gasprice - block.basefee;
         require(txMaxPriorityFee <= maxPriorityFee, "maxPriorityFee is higher than expected");
+
         uint256 additionalGas = 30000 + (40 + functionData.length) * 14;
         uint256 gasPrice = tx.gasprice + relayerFee;
-        require(token.transferFrom(target, address(this), (gasleft() + additionalGas) * gasPrice), "Could not aquire tokens");
+
         // The method id is appended by the contract to avoid that another method is called
         bytes memory data = abi.encodePacked(method, functionData);
         bool success;
@@ -68,7 +70,9 @@ contract Relayer is Ownable {
             success := call(sub(gas(), 12000), target, 0, add(data, 0x20), mload(data), 0, 0)
         }
         require(success, "Could not successfully call target");
-        require(token.transfer(target, (gasleft()) * gasPrice), "Could not refund unused gas");
+
+        // It's responsability of the sender to check if the Safe has enough funds to pay
+        require(token.transferFrom(target, msg.sender, (gas - gasleft() + additionalGas) * gasPrice), "Could not refund sender");
     }
     
 }

@@ -11,14 +11,14 @@ describe("Relayer", function () {
   async function deployContractFixture() {
 
     // Contracts are deployed using the first signer/account by default
-    const [owner, otherAccount] = await ethers.getSigners();
+    const [owner, otherAccount, relayerAccount] = await ethers.getSigners();
 
     const Relayer = await ethers.getContractFactory("Relayer");
     const ERC20Token = await ethers.getContractFactory("ERC20Token");
     const erc20Token = await ERC20Token.deploy();
     const relayer = await Relayer.deploy(erc20Token.address, ethers.utils.parseUnits('1', 'gwei'), 0, '0x6a761202');
 
-    return { relayer, erc20Token, owner, otherAccount };
+    return { relayer, erc20Token, owner, otherAccount, relayerAccount };
   }
 
   async function deploySafeFixture() {
@@ -80,7 +80,7 @@ describe("Relayer", function () {
     });
 
     it("Should relay a Safe transaction", async function () {
-      const { relayer, erc20Token, owner, otherAccount } = await loadFixture(deployContractFixture);
+      const { relayer, erc20Token, owner, otherAccount, relayerAccount } = await loadFixture(deployContractFixture);
       const GnosisSafe = await ethers.getContractFactory("ExampleGnosisSafe");
       const gnosisSafe = await GnosisSafe.deploy({'gasLimit': 10000000});
       // Don't use proxies for testing
@@ -126,9 +126,10 @@ describe("Relayer", function () {
       await erc20Token.connect(safeSigner).approve(relayer.address, ethers.utils.parseEther('1'))
 
       // If transaction is executed and relayed, `amountToSend` ether will be sent from Safe to `otherAccount`
-      await expect(await relayer.execute(gnosisSafe.address, dataWithoutMethod)).to.emit(
+      await expect(await relayer.connect(relayerAccount).execute(gnosisSafe.address, dataWithoutMethod)).to.emit(
           erc20Token, 'Transfer'
-        ).to.changeEtherBalances([gnosisSafe.address, otherAccount.address], [-amountToSend, amountToSend]);
+        ).to.changeEtherBalances([gnosisSafe.address, otherAccount.address], [-amountToSend, amountToSend]
+        ).to.changeTokenBalances(erc20Token, [gnosisSafe.address, relayerAccount.address], [-137544173377875, 137544173377875]);
 
       // If Safe transaction is not valid, everything should revert and no funds must be transferred
       // Use same transaction again
