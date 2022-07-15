@@ -1,20 +1,24 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: LGPL-3.0
 pragma solidity ^0.8.9;
-
-// Import this file to use console.log
-import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+
+/// @title Safe Relayer - A relayer for Safe multisig wallet
+/// @author Uxío Fuentefría - <uxio@safe.global>
+/// @custom:experimental This is an experimental contract.
 contract Relayer is Ownable {
     ERC20 public token;
     uint public maxPriorityFee;
     uint public relayerFee;
     bytes4 public method;
 
-    event RelayedTransaction(uint amount);
-
+    /// @dev Init contract
+    /// @param _token Token for paying refunds. Should be the wrapped version of the base currency (e.g. WETH for mainnet)
+    /// @param _maxPriorityFee MaxPriorityFee clients will be paying, so relayer cannot be abused to drain user funds
+    /// @param _relayerFee Relayer fee that will be added to the gasPrice when calculating refunds
+    /// @param _method Method id that will be called on the Safe
     constructor(ERC20 _token, uint _maxPriorityFee, uint _relayerFee, bytes4 _method) {
         require(
             address(_token) != address(0),
@@ -32,26 +36,38 @@ contract Relayer is Ownable {
         method = _method;
     }
 
+    /// @param _token New token for paying refunds
     function changeToken(ERC20 _token) public onlyOwner {
         token = _token;
     }
 
+    /// @param _maxPriorityFee New MaxPriorityFee clients will be paying
     function changeMaxPriorityFee(uint _maxPriorityFee) public onlyOwner {
         maxPriorityFee = _maxPriorityFee;
     }
 
+    /// @param _relayerFee New Relayer fee
     function changeRelayerFee(uint _relayerFee) public onlyOwner {
         relayerFee = _relayerFee;
     }
 
+    /// @notice Recover tokens sent by mistake to this contract
+    /// @dev Ether recovery is not implemented as contract is not payable
+    /// @param withdrawToken token to recover
+    /// @param target destination for the funds
     function recoverFunds(ERC20 withdrawToken, address target) public onlyOwner {
-        // Contract is not payable so ether cannot be sent
         withdrawToken.transfer(target, withdrawToken.balanceOf(address(this)));
     }
 
-    function execute(
+    /// @notice Relay a transaction and get refunded
+    /// @dev It's responsability of the sender to check if the Safe has enough funds to pay
+    /// @param target Safe to call
+    /// @param functionData ABI encoded Safe `execTransaction` without the method selector
+    /// @param target destination for the refund
+    function relay(
         address target,
-        bytes calldata functionData
+        bytes calldata functionData,
+        address refundAccount
         ) external {
         // 9k are for the token transfers + 21k base + data (8 bytes method + 32 bytes address + data)
         // We will use 14 as the gas price per data byte, to avoid overcharging too much
@@ -72,7 +88,8 @@ contract Relayer is Ownable {
         require(success, "Could not successfully call target");
 
         // It's responsability of the sender to check if the Safe has enough funds to pay
-        require(token.transferFrom(target, msg.sender, (gas - gasleft() + additionalGas) * gasPrice), "Could not refund sender");
+        address refundTarget = refundAccount==address(0)?msg.sender:refundAccount;
+        require(token.transferFrom(target, refundTarget, (gas - gasleft() + additionalGas) * gasPrice), "Could not refund sender");
     }
     
 }

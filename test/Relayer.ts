@@ -74,7 +74,7 @@ describe("Relayer", function () {
       // This address is not relevant
       const random_address = relayer.address;
 
-      await expect(relayer.execute(random_address, '0x', {'maxPriorityFeePerGas': maxPriorityFee.add(1)})).to.be.revertedWith(
+      await expect(relayer.relay(random_address, '0x', ethers.constants.AddressZero, {'maxPriorityFeePerGas': maxPriorityFee.add(1)})).to.be.revertedWith(
         "maxPriorityFee is higher than expected"
       );
     });
@@ -116,7 +116,7 @@ describe("Relayer", function () {
 
       let dataWithoutMethod = '0x' + data?.slice(10);
 
-      await expect(relayer.execute(gnosisSafe.address, dataWithoutMethod)).to.be.revertedWith(
+      await expect(relayer.relay(gnosisSafe.address, dataWithoutMethod, ethers.constants.AddressZero)).to.be.revertedWith(
         "ERC20: insufficient allowance"
       );
 
@@ -126,14 +126,14 @@ describe("Relayer", function () {
       await erc20Token.connect(safeSigner).approve(relayer.address, ethers.utils.parseEther('1'))
 
       // If transaction is executed and relayed, `amountToSend` ether will be sent from Safe to `otherAccount`
-      await expect(await relayer.connect(relayerAccount).execute(gnosisSafe.address, dataWithoutMethod)).to.emit(
+      await expect(await relayer.connect(relayerAccount).relay(gnosisSafe.address, dataWithoutMethod, ethers.constants.AddressZero)).to.emit(
           erc20Token, 'Transfer'
         ).to.changeEtherBalances([gnosisSafe.address, otherAccount.address], [-amountToSend, amountToSend]
-        ).to.changeTokenBalances(erc20Token, [gnosisSafe.address, relayerAccount.address], [-137544173377875, 137544173377875]);
+        ).to.changeTokenBalances(erc20Token, [gnosisSafe.address, relayerAccount.address], [-137612366763872, 137612366763872]);
 
       // If Safe transaction is not valid, everything should revert and no funds must be transferred
       // Use same transaction again
-      await expect(relayer.execute(gnosisSafe.address, dataWithoutMethod)).to.be.revertedWith(
+      await expect(relayer.relay(gnosisSafe.address, dataWithoutMethod, ethers.constants.AddressZero)).to.be.revertedWith(
         "Could not successfully call target"
       )
     });
