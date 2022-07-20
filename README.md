@@ -1,3 +1,5 @@
+![CI](https://github.com/Uxio0/relayer-contracts/actions/workflows/ci.yml/badge.svg)
+
 # Safe Relayer contract
 
 Relay Safe transactions using allowances for refunding.
