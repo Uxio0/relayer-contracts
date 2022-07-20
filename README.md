@@ -1,13 +1,26 @@
-# Sample Hardhat Project
+# Safe Relayer contract
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+Relay Safe transactions using allowances for refunding.
 
-Try running some of the following tasks:
+# Set up for development
 
 ```shell
-npx hardhat help
-npx hardhat test
+yarn
+yarn run prepare
+```
+
+# Running tests
+
+```shell
 REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
+```
+
+# Deploying contracts
+
+```shell
+export PRIVATE_KEY=''
+export ETHERSCAN_API_KEY=''
+npx hardhat deploy --network goerli
+npx hardhat sourcify
+npx hardhat etherscan-verify --api-key $ETHERSCAN_API_KEY
 ```

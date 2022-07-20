@@ -1,5 +1,5 @@
 name: safe-contracts
-on: [ push, pull_request ]
+on: [push, pull_request]
 
 jobs:
   tests:
@@ -14,4 +14,6 @@ jobs:
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
       - run: yarn --frozen-lockfile
+      - run: npx prettier --check .
+      # - run: npx hardhat check
       - run: npx hardhat test

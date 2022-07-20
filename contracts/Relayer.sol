@@ -25,7 +25,7 @@ contract Relayer is Ownable {
             "Token cannot be empty"
         );
 
-         require(
+        require(
             _maxPriorityFee > 0,
             "MaxPriorityFee must be higher than 0"
         );
@@ -90,7 +90,7 @@ contract Relayer is Ownable {
         require(success, "Could not successfully call target");
 
         // It's responsability of the sender to check if the Safe has enough funds to pay
-        address refundTarget = refundAccount==address(0)?msg.sender:refundAccount;
+        address refundTarget = refundAccount == address(0) ? msg.sender : refundAccount;
         require(token.transferFrom(target, refundTarget, (gas - gasleft() + additionalGas) * gasPrice), "Could not refund sender");
     }
     
