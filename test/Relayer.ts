@@ -189,7 +189,7 @@ describe("Relayer", function () {
         .to.changeTokenBalances(
           erc20Token,
           [gnosisSafe.address, relayerAccount.address],
-          [-137615810427186, 137615810427186]
+          [-137615806685994, 137615806685994]
         );
 
       // If Safe transaction is not valid, everything should revert and no funds must be transferred

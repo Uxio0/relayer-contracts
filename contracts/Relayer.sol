@@ -33,6 +33,7 @@ contract Relayer is Ownable {
         relayerFee = _relayerFee;
         method = _method;
         // Prevent issues with deterministic deployment
+        // solhint-disable-next-line avoid-tx-origin
         transferOwnership(tx.origin);
     }
 
