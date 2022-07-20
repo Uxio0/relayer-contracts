@@ -1,5 +1,5 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
+// import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { impersonateAccount } from "@nomicfoundation/hardhat-network-helpers";
@@ -24,8 +24,6 @@ describe("Relayer", function () {
 
     return { relayer, erc20Token, owner, otherAccount, relayerAccount };
   }
-
-  async function deploySafeFixture() {}
 
   describe("Deployment", function () {
     it("Should set the right parameters", async function () {
@@ -58,7 +56,7 @@ describe("Relayer", function () {
 
     it("Should fail if priority fee is zero", async function () {
       const Relayer = await ethers.getContractFactory("Relayer");
-      const [_, random_address] = await ethers.getSigners();
+      const [, random_address] = await ethers.getSigners();
       await expect(
         Relayer.deploy(random_address.address, 0, 0, "0x6a761202")
       ).to.be.revertedWith("MaxPriorityFee must be higher than 0");
@@ -67,10 +65,10 @@ describe("Relayer", function () {
 
   describe("Operating", function () {
     it("Should allow to recover tokens sent", async function () {
-      const { relayer, erc20Token, owner, otherAccount } = await loadFixture(
+      const { relayer, erc20Token, otherAccount } = await loadFixture(
         deployContractFixture
       );
-      let amount = 48;
+      const amount = 48;
       await erc20Token.transfer(relayer.address, amount);
       expect(await erc20Token.balanceOf(otherAccount.address)).to.equal(0);
       await relayer.recoverFunds(erc20Token.address, otherAccount.address);
@@ -110,7 +108,7 @@ describe("Relayer", function () {
       );
 
       // Send some ether to the Safe
-      let amount = ethers.utils.parseEther("1");
+      const amount = ethers.utils.parseEther("1");
       await expect(
         await owner.sendTransaction({ to: gnosisSafe.address, value: amount })
       ).to.changeEtherBalance(gnosisSafe.address, amount);
@@ -122,8 +120,8 @@ describe("Relayer", function () {
       );
 
       // Craft Safe Tx to send ether out
-      let amountToSend = ethers.BigNumber.from(23);
-      let transactionHash = await gnosisSafe.getTransactionHash(
+      const amountToSend = ethers.BigNumber.from(23);
+      const transactionHash = await gnosisSafe.getTransactionHash(
         otherAccount.address,
         amountToSend,
         "0x",
@@ -140,10 +138,10 @@ describe("Relayer", function () {
         ethers.utils.arrayify(transactionHash)
       );
       // Increase v by 4
-      let v = parseInt("0x" + signature.slice(-2)) + 4;
+      const v = parseInt("0x" + signature.slice(-2)) + 4;
       signature = signature.slice(0, -2) + v.toString(16);
 
-      let { data } = await gnosisSafe.populateTransaction.execTransaction(
+      const { data } = await gnosisSafe.populateTransaction.execTransaction(
         otherAccount.address,
         amountToSend,
         "0x",
@@ -156,7 +154,7 @@ describe("Relayer", function () {
         signature
       );
 
-      let dataWithoutMethod = "0x" + data?.slice(10);
+      const dataWithoutMethod = "0x" + data?.slice(10);
 
       await expect(
         relayer.relay(
