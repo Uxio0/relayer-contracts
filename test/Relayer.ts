@@ -15,7 +15,9 @@ describe("Relayer", function () {
     const Relayer = await ethers.getContractFactory("Relayer");
     const ERC20Token = await ethers.getContractFactory("ERC20Token");
     const erc20Token = await ERC20Token.deploy();
-    const relayer = await Relayer.deploy(
+    const relayer = await Relayer.deploy();
+
+    await relayer.setup(
       erc20Token.address,
       ethers.utils.parseUnits("1", "gwei"),
       0,
@@ -44,8 +46,9 @@ describe("Relayer", function () {
     it("Should fail if token is empty", async function () {
       // We don't use the fixture here because we want a different deployment
       const Relayer = await ethers.getContractFactory("Relayer");
+      const relayer = await Relayer.deploy();
       await expect(
-        Relayer.deploy(
+        relayer.setup(
           ethers.constants.AddressZero,
           ethers.utils.parseUnits("1", "gwei"),
           0,
@@ -56,10 +59,23 @@ describe("Relayer", function () {
 
     it("Should fail if priority fee is zero", async function () {
       const Relayer = await ethers.getContractFactory("Relayer");
+      const relayer = await Relayer.deploy();
       const [, random_address] = await ethers.getSigners();
       await expect(
-        Relayer.deploy(random_address.address, 0, 0, "0x6a761202")
+        relayer.setup(random_address.address, 0, 0, "0x6a761202")
       ).to.be.revertedWith("MaxPriorityFee must be higher than 0");
+    });
+
+    it("Should fail if setup called twice", async function () {
+      const { relayer } = await loadFixture(deployContractFixture);
+      await expect(
+        relayer.setup(
+          ethers.constants.AddressZero,
+          ethers.utils.parseUnits("1", "gwei"),
+          0,
+          "0x6a761202"
+        )
+      ).to.be.revertedWith("Setup was already called");
     });
   });
 
@@ -189,7 +205,7 @@ describe("Relayer", function () {
         .to.changeTokenBalances(
           erc20Token,
           [gnosisSafe.address, relayerAccount.address],
-          [-137615806685994, 137615806685994]
+          [-133464543566172, 133464543566172]
         );
 
       // If Safe transaction is not valid, everything should revert and no funds must be transferred

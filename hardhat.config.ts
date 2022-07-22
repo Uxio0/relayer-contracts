@@ -20,7 +20,11 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
     },
     goerli: {
-      url: "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+      url: "https://rpc.ankr.com/eth_goerli",
+      accounts: [KEY],
+    },
+    rinkeby: {
+      url: "https://rpc.ankr.com/eth_rinkeby",
       accounts: [KEY],
     },
   },

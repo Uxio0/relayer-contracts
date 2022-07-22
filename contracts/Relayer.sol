@@ -14,36 +14,40 @@ contract Relayer is Ownable {
     bytes4 public method;
 
     /// @dev Init contract
-    /// @param _token Token for paying refunds. Should be the wrapped version of the base currency (e.g. WETH for mainnet)
-    /// @param _maxPriorityFee MaxPriorityFee clients will be paying, so relayer cannot be abused to drain user funds
-    /// @param _relayerFee Relayer fee that will be added to the gasPrice when calculating refunds
-    /// @param _method Method id that will be called on the Safe
-    constructor(
-        IERC20 _token,
-        uint256 _maxPriorityFee,
-        uint256 _relayerFee,
-        bytes4 _method
-    ) {
-        require(address(_token) != address(0), "Token cannot be empty");
-
-        require(_maxPriorityFee > 0, "MaxPriorityFee must be higher than 0");
-
-        token = _token;
-        maxPriorityFee = _maxPriorityFee;
-        relayerFee = _relayerFee;
-        method = _method;
+    constructor() {
         // Prevent issues with deterministic deployment
         // solhint-disable-next-line avoid-tx-origin
         transferOwnership(tx.origin);
     }
 
+    /// @dev Init contract
+    /// @param _token Token for paying refunds. Should be the wrapped version of the base currency (e.g. WETH for mainnet)
+    /// @param _maxPriorityFee MaxPriorityFee clients will be paying, so relayer cannot be abused to drain user funds
+    /// @param _relayerFee Relayer fee that will be added to the gasPrice when calculating refunds
+    /// @param _method Method id that will be called on the Safe
+    function setup(
+        IERC20 _token,
+        uint256 _maxPriorityFee,
+        uint256 _relayerFee,
+        bytes4 _method
+    ) external onlyOwner {
+        // Setup can only be called once
+        require(address(token) == address(0), "Setup was already called");
+        changeToken(_token);
+        changeMaxPriorityFee(_maxPriorityFee);
+        changeRelayerFee(_relayerFee);
+        method = _method;
+    }
+
     /// @param _token New token for paying refunds
     function changeToken(IERC20 _token) public onlyOwner {
+        require(address(_token) != address(0), "Token cannot be empty");
         token = _token;
     }
 
     /// @param _maxPriorityFee New MaxPriorityFee clients will be paying
     function changeMaxPriorityFee(uint256 _maxPriorityFee) public onlyOwner {
+        require(_maxPriorityFee > 0, "MaxPriorityFee must be higher than 0");
         maxPriorityFee = _maxPriorityFee;
     }
 
