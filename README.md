@@ -4,6 +4,11 @@
 
 Relay Safe transactions using allowances for refunding.
 
+Address `0xCae5e615455196bF3de826FE8f7fBA8efAf19574`. Currently deployed on:
+
+- Rinkeby
+- Goerli
+
 # Set up for development
 
 ```shell
