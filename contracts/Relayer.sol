@@ -14,6 +14,7 @@ contract Relayer is Ownable {
     bytes4 public method;
 
     /// @dev Init contract
+    // solhint-disable-next-line func-visibility
     constructor() {
         // Prevent issues with deterministic deployment
         // solhint-disable-next-line avoid-tx-origin

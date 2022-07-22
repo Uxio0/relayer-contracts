@@ -16,5 +16,5 @@ jobs:
       - run: yarn --frozen-lockfile
       - run: npx prettier --check .
       - run: yarn eslint .
-      # - run: npx hardhat check
+      - run: npx hardhat check
       - run: npx hardhat test

@@ -7,6 +7,7 @@ import "hardhat/console.sol";
 import "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
 
 contract ExampleGnosisSafe is GnosisSafe {
+    // solhint-disable-next-line func-visibility
     constructor() {
         // Don't initialize the contract, so we don't need to use proxies for testing
         threshold = 0;

@@ -3,3 +3,4 @@
 
 npx pretty-quick --staged
 yarn eslint .
+npx hardhat check
