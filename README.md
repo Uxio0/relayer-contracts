@@ -4,10 +4,9 @@
 
 Relay Safe transactions using allowances for refunding.
 
-Address `0xCae5e615455196bF3de826FE8f7fBA8efAf19574`. Currently deployed on:
+Address `0x569212Bc7D93F6B64aE922101BaE91d526A2913b`. Currently deployed on:
 
-- [Rinkeby](https://rinkeby.etherscan.io/address/0xCae5e615455196bF3de826FE8f7fBA8efAf19574)
-- [Goerli](https://goerli.etherscan.io/address/0xCae5e615455196bF3de826FE8f7fBA8efAf19574)
+- [Goerli](https://goerli.etherscan.io/address/0x569212Bc7D93F6B64aE922101BaE91d526A2913b)
 
 # Set up for development
 
