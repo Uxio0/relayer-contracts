@@ -87,7 +87,8 @@ contract Relayer is Ownable {
             "maxPriorityFee is higher than expected"
         );
 
-        uint256 additionalGas = 30000 + (40 + functionData.length) * 14;
+        // Function overhead + data parameters + erc20 transfer
+        uint256 additionalGas = 30000 + (40 + functionData.length) * 14 + 29000;
         uint256 gasPrice = tx.gasprice + relayerFee;
 
         // The method id is appended by the contract to avoid that another method is called

@@ -187,26 +187,48 @@ describe("Relayer", function () {
         .connect(safeSigner)
         .approve(relayer.address, ethers.utils.parseEther("1"));
 
+      // Init relayer weth storage with 1 wei so gas fees are not
+      // really high for storage initialization
+      await erc20Token.transfer(relayerAccount.address, "1");
+
       // If transaction is executed and relayed, `amountToSend` ether will be sent from Safe to `otherAccount`
-      await expect(
-        await relayer
-          .connect(relayerAccount)
-          .relay(
-            gnosisSafe.address,
-            dataWithoutMethod,
-            ethers.constants.AddressZero
-          )
-      )
-        .to.emit(erc20Token, "Transfer")
-        .to.changeEtherBalances(
-          [gnosisSafe.address, otherAccount.address],
-          [-amountToSend, amountToSend]
-        )
-        .to.changeTokenBalances(
-          erc20Token,
-          [gnosisSafe.address, relayerAccount.address],
-          [-133464543566172, 133464543566172]
+      const safeBalanceBefore = await ethers.provider.getBalance(
+        gnosisSafe.address
+      );
+      const otherAccountBalanceBefore = await ethers.provider.getBalance(
+        otherAccount.address
+      );
+      const safeWethBefore = await erc20Token.balanceOf(gnosisSafe.address);
+      const relayerWethBefore = await erc20Token.balanceOf(
+        relayerAccount.address
+      );
+
+      // 1 wei on the relayer
+      expect(relayerWethBefore).to.be.eq(1);
+
+      const tx = await relayer
+        .connect(relayerAccount)
+        .relay(
+          gnosisSafe.address,
+          dataWithoutMethod,
+          ethers.constants.AddressZero
         );
+      const receipt = await tx.wait();
+
+      expect(await ethers.provider.getBalance(gnosisSafe.address)).to.be.equal(
+        safeBalanceBefore.sub(amountToSend)
+      );
+      expect(
+        await ethers.provider.getBalance(otherAccount.address)
+      ).to.be.equal(otherAccountBalanceBefore.add(amountToSend));
+      expect(await erc20Token.balanceOf(gnosisSafe.address)).to.be.lessThan(
+        safeWethBefore
+      );
+
+      // Check relayer was refunded a fair amount
+      expect(
+        await erc20Token.balanceOf(relayerAccount.address)
+      ).to.be.greaterThan(receipt.gasUsed.mul(receipt.effectiveGasPrice));
 
       // If Safe transaction is not valid, everything should revert and no funds must be transferred
       // Use same transaction again
