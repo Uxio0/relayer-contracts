@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -15,10 +15,8 @@ contract Relayer is Ownable {
 
     /// @dev Init contract
     // solhint-disable-next-line func-visibility
-    constructor() {
+    constructor() Ownable(tx.origin){
         // Prevent issues with deterministic deployment
-        // solhint-disable-next-line avoid-tx-origin
-        transferOwnership(tx.origin);
     }
 
     /// @dev Init contract

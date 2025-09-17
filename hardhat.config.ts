@@ -1,35 +1,41 @@
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
-import "hardhat-gas-reporter";
-import "hardhat-deploy";
-import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-solhint";
+import type { HardhatUserConfig } from "hardhat/config";
 
-const { PRIVATE_KEY } = process.env;
-const KEY =
-  PRIVATE_KEY ||
-  "0x89ee953f39a41067828eb72edf94ef6d371d5cf89a8ae4ad005bfd4341c07ae8";
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import { configVariable } from "hardhat/config";
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.9",
-  namedAccounts: {
-    deployer: 0,
+  plugins: [hardhatToolboxViemPlugin],
+  solidity: {
+    profiles: {
+      default: {
+        version: "0.8.28",
+      },
+      production: {
+        version: "0.8.28",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    },
   },
   networks: {
-    hardhat: {
-      allowUnlimitedContractSize: true,
+    hardhatMainnet: {
+      type: "edr-simulated",
+      chainType: "l1",
     },
-    goerli: {
-      url: "https://rpc.ankr.com/eth_goerli",
-      accounts: [KEY],
+    hardhatOp: {
+      type: "edr-simulated",
+      chainType: "op",
     },
-    rinkeby: {
-      url: "https://rpc.ankr.com/eth_rinkeby",
-      accounts: [KEY],
+    sepolia: {
+      type: "http",
+      chainType: "l1",
+      url: configVariable("SEPOLIA_RPC_URL"),
+      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
-  },
-  gasReporter: {
-    enabled: process.env.REPORT_GAS ? true : false,
   },
 };
 
