@@ -1,10 +1,13 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
+import {
+  parseGwei,
+} from "viem";
 
 export default buildModule("RelayerModule", (m) => {
-  const token = m.getParameter<string>("token");
-  const maxPriorityFee = m.getParameter<bigint>("maxPriorityFee", 1_000_000_000n);
-  const relayerFee = m.getParameter<bigint>("relayerFee", 0n);
-  const method = m.getParameter<string>("method", "0x00000000");
+  const token = m.getParameter<string>("tokenAddress");
+  const maxPriorityFee = m.getParameter<string>("maxPriorityFee");
+  const relayerFee = m.getParameter<string>("relayerFee");
+  const method = m.getParameter<string>("method", "0x6a761202");
 
   const relayer = m.contract("Relayer");
 
