@@ -1,7 +1,5 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
-import {
-  parseGwei,
-} from "viem";
+import { parseGwei } from "viem";
 
 export default buildModule("RelayerModule", (m) => {
   const token = m.getParameter<string>("tokenAddress");

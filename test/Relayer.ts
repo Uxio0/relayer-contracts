@@ -32,9 +32,7 @@ describe("Relayer", async function () {
     it("Should set the right parameters", async function () {
       const { erc20Token, relayer } = await deployAndSetup();
 
-      assert.ok(
-        isAddressEqual(await relayer.read.token(), erc20Token.address),
-      );
+      assert.ok(isAddressEqual(await relayer.read.token(), erc20Token.address));
       assert.equal(await relayer.read.maxPriorityFee(), 1_000_000_000n);
       assert.equal(await relayer.read.relayerFee(), 0n);
       assert.equal(await relayer.read.method(), "0x6a761202");
@@ -111,11 +109,7 @@ describe("Relayer", async function () {
       const randomAddress = relayer.address; // any address
 
       await viem.assertions.revertWith(
-        relayer.write.relay([
-          randomAddress,
-          "0x",
-          zeroAddress,
-        ], {
+        relayer.write.relay([randomAddress, "0x", zeroAddress], {
           account: owner.account,
           maxPriorityFeePerGas: maxPriorityFee + 1n,
         }),
@@ -201,10 +195,9 @@ describe("Relayer", async function () {
 
       // Approve token from the Safe (impersonating)
       await testClient.impersonateAccount({ address: gnosisSafe.address });
-      await erc20Token.write.approve(
-        [relayer.address, parseEther("1")],
-        { account: gnosisSafe.address },
-      );
+      await erc20Token.write.approve([relayer.address, parseEther("1")], {
+        account: gnosisSafe.address,
+      });
 
       // Init relayer token storage with 1 wei
       await erc20Token.write.transfer([relayerAccount.account.address, 1n]);
@@ -215,7 +208,9 @@ describe("Relayer", async function () {
       const otherAccountBalanceBefore = await publicClient.getBalance({
         address: otherAccount.account.address,
       });
-      const safeWethBefore = await erc20Token.read.balanceOf([gnosisSafe.address]);
+      const safeWethBefore = await erc20Token.read.balanceOf([
+        gnosisSafe.address,
+      ]);
       const relayerWethBefore = await erc20Token.read.balanceOf([
         relayerAccount.account.address,
       ]);
@@ -233,18 +228,22 @@ describe("Relayer", async function () {
         safeBalanceBefore - amountToSend,
       );
       assert.equal(
-        await publicClient.getBalance({ address: otherAccount.account.address }),
+        await publicClient.getBalance({
+          address: otherAccount.account.address,
+        }),
         otherAccountBalanceBefore + amountToSend,
       );
-      assert((await erc20Token.read.balanceOf([gnosisSafe.address])) < safeWethBefore);
+      assert(
+        (await erc20Token.read.balanceOf([gnosisSafe.address])) <
+          safeWethBefore,
+      );
 
       // Check relayer was refunded a fair amount
       const relayerWethAfter = await erc20Token.read.balanceOf([
         relayerAccount.account.address,
       ]);
       assert(
-        relayerWethAfter >
-          receipt.gasUsed * (receipt.effectiveGasPrice ?? 0n),
+        relayerWethAfter > receipt.gasUsed * (receipt.effectiveGasPrice ?? 0n),
       );
 
       // If Safe transaction is not valid, it should revert
