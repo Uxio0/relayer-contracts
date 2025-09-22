@@ -6,6 +6,7 @@ interface ChainConfiguration {
   tokenAddress: Address;
   maxPriorityFee: bigint;
   relayerFee: bigint;
+  [key: string]: string | bigint | number; // Ignition deploy requires string index
 }
 
 const chainConfigurations: Record<number, ChainConfiguration> = {
