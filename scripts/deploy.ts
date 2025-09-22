@@ -1,23 +1,67 @@
-import { ethers } from "hardhat";
+import hre from "hardhat";
+import RelayerModule from "../ignition/modules/Relayer.js";
+import { Address, parseGwei } from "viem";
 
-async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
-
-  const lockedAmount = ethers.utils.parseEther("1");
-
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
-
-  await lock.deployed();
-
-  console.log("Lock with 1 ETH deployed to:", lock.address);
+interface ChainConfiguration {
+  tokenAddress: Address;
+  maxPriorityFee: bigint;
+  relayerFee: bigint;
+  [key: string]: string | bigint | number; // Ignition deploy requires string index
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+const chainConfigurations: Record<number, ChainConfiguration> = {
+  4: {
+    tokenAddress: "0xc778417E063141139Fce010982780140Aa0cD5Ab",
+    maxPriorityFee: parseGwei("2"),
+    relayerFee: parseGwei("0"),
+  },
+  5: {
+    tokenAddress: "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
+    maxPriorityFee: parseGwei("2"),
+    relayerFee: parseGwei("0"),
+  },
+  100: {
+    tokenAddress: "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d",
+    maxPriorityFee: parseGwei("2"),
+    relayerFee: parseGwei("0"),
+  },
+  31337: {
+    tokenAddress: "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d",
+    maxPriorityFee: parseGwei("2"),
+    relayerFee: parseGwei("0"),
+  },
+  11155111: {
+    tokenAddress: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
+    maxPriorityFee: parseGwei("2"),
+    relayerFee: parseGwei("0"),
+  },
+};
+
+async function main() {
+  const connection = await hre.network.connect();
+  const viemClient = await connection.viem.getPublicClient();
+  const chainId = await viemClient.getChainId();
+  const chainConfiguration = chainConfigurations[chainId];
+  if (chainConfiguration === undefined) {
+    console.log(`chainId ${chainId} configuration not defined`);
+  } else {
+    console.log(chainConfiguration);
+    const code = await viemClient.getCode({
+      address: chainConfiguration.tokenAddress,
+    });
+    if (code === undefined) {
+      console.log(
+        `WETH contract ${chainConfiguration.tokenAddress} is not deployed`,
+      );
+    } else {
+      const { relayer } = await connection.ignition.deploy(RelayerModule, {
+        parameters: { RelayerModule: chainConfiguration },
+      });
+      console.log(
+        `Relayer deployed to ${relayer.address} in chainId ${chainId}`,
+      );
+    }
+  }
+}
+
+main().catch(console.error);

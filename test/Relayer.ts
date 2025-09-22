@@ -1,244 +1,260 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-// import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
-import { expect } from "chai";
-import { ethers } from "hardhat";
-import { impersonateAccount } from "@nomicfoundation/hardhat-network-helpers";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
-describe("Relayer", function () {
-  // We define a fixture to reuse the same setup in every test.
-  // We use loadFixture to run this setup once, snapshot that state,
-  // and reset Hardhat Network to that snapshopt in every test.
-  async function deployContractFixture() {
-    // Contracts are deployed using the first signer/account by default
-    const [owner, otherAccount, relayerAccount] = await ethers.getSigners();
+import { network } from "hardhat";
+import {
+  encodeFunctionData,
+  parseEther,
+  parseGwei,
+  isAddressEqual,
+  zeroAddress,
+} from "viem";
 
-    const Relayer = await ethers.getContractFactory("Relayer");
-    const ERC20Token = await ethers.getContractFactory("ERC20Token");
-    const erc20Token = await ERC20Token.deploy();
-    const relayer = await Relayer.deploy();
+describe("Relayer", async function () {
+  const { viem } = await network.connect();
+  const publicClient = await viem.getPublicClient();
+  const testClient = await viem.getTestClient();
+  const [owner, otherAccount, relayerAccount] = await viem.getWalletClients();
 
-    await relayer.setup(
+  async function deployAndSetup() {
+    const erc20Token = await viem.deployContract("ERC20Token");
+    const relayer = await viem.deployContract("Relayer");
+    await relayer.write.setup([
       erc20Token.address,
-      ethers.utils.parseUnits("1", "gwei"),
-      0,
-      "0x6a761202"
-    );
-
-    return { relayer, erc20Token, owner, otherAccount, relayerAccount };
+      parseGwei("1"),
+      0n,
+      "0x6a761202",
+    ]);
+    return { erc20Token, relayer };
   }
 
   describe("Deployment", function () {
     it("Should set the right parameters", async function () {
-      const { relayer, erc20Token } = await loadFixture(deployContractFixture);
+      const { erc20Token, relayer } = await deployAndSetup();
 
-      expect(await relayer.token()).to.equal(erc20Token.address);
-      expect(await relayer.maxPriorityFee()).to.equal(1000000000);
-      expect(await relayer.relayerFee()).to.equal(0);
-      expect(await relayer.method()).to.equal("0x6a761202");
+      assert.ok(isAddressEqual(await relayer.read.token(), erc20Token.address));
+      assert.equal(await relayer.read.maxPriorityFee(), 1_000_000_000n);
+      assert.equal(await relayer.read.relayerFee(), 0n);
+      assert.equal(await relayer.read.method(), "0x6a761202");
     });
 
     it("Should set the right owner", async function () {
-      const { relayer, owner } = await loadFixture(deployContractFixture);
-
-      expect(await relayer.owner()).to.equal(owner.address);
+      const { relayer } = await deployAndSetup();
+      assert.ok(
+        isAddressEqual(await relayer.read.owner(), owner.account.address),
+      );
     });
 
     it("Should fail if token is empty", async function () {
-      // We don't use the fixture here because we want a different deployment
-      const Relayer = await ethers.getContractFactory("Relayer");
-      const relayer = await Relayer.deploy();
-      await expect(
-        relayer.setup(
-          ethers.constants.AddressZero,
-          ethers.utils.parseUnits("1", "gwei"),
-          0,
-          "0x6a761202"
-        )
-      ).to.be.revertedWith("Token cannot be empty");
+      const relayer = await viem.deployContract("Relayer");
+      await viem.assertions.revertWith(
+        relayer.write.setup([zeroAddress, parseGwei("1"), 0n, "0x6a761202"]),
+        "Token cannot be empty",
+      );
     });
 
     it("Should fail if priority fee is zero", async function () {
-      const Relayer = await ethers.getContractFactory("Relayer");
-      const relayer = await Relayer.deploy();
-      const [, random_address] = await ethers.getSigners();
-      await expect(
-        relayer.setup(random_address.address, 0, 0, "0x6a761202")
-      ).to.be.revertedWith("MaxPriorityFee must be higher than 0");
+      const relayer = await viem.deployContract("Relayer");
+      await viem.assertions.revertWith(
+        relayer.write.setup([
+          otherAccount.account.address,
+          0n,
+          0n,
+          "0x6a761202",
+        ]),
+        "MaxPriorityFee must be higher than 0",
+      );
     });
 
     it("Should fail if setup called twice", async function () {
-      const { relayer } = await loadFixture(deployContractFixture);
-      await expect(
-        relayer.setup(
-          ethers.constants.AddressZero,
-          ethers.utils.parseUnits("1", "gwei"),
-          0,
-          "0x6a761202"
-        )
-      ).to.be.revertedWith("Setup was already called");
+      const { relayer, erc20Token } = await deployAndSetup();
+      await viem.assertions.revertWith(
+        relayer.write.setup([
+          erc20Token.address,
+          parseGwei("1"),
+          0n,
+          "0x6a761202",
+        ]),
+        "Setup was already called",
+      );
     });
   });
 
   describe("Operating", function () {
     it("Should allow to recover tokens sent", async function () {
-      const { relayer, erc20Token, otherAccount } = await loadFixture(
-        deployContractFixture
+      const { erc20Token, relayer } = await deployAndSetup();
+
+      const amount = 48n;
+      await erc20Token.write.transfer([relayer.address, amount]);
+      assert.equal(
+        await erc20Token.read.balanceOf([otherAccount.account.address]),
+        0n,
       );
-      const amount = 48;
-      await erc20Token.transfer(relayer.address, amount);
-      expect(await erc20Token.balanceOf(otherAccount.address)).to.equal(0);
-      await relayer.recoverFunds(erc20Token.address, otherAccount.address);
-      expect(await erc20Token.balanceOf(otherAccount.address)).to.equal(amount);
+
+      await relayer.write.recoverFunds([
+        erc20Token.address,
+        otherAccount.account.address,
+      ]);
+
+      assert.equal(
+        await erc20Token.read.balanceOf([otherAccount.account.address]),
+        amount,
+      );
     });
 
     it("Should not relay when exceeding maxPriorityFee", async function () {
-      const { relayer } = await loadFixture(deployContractFixture);
-      const maxPriorityFee = await relayer.maxPriorityFee();
+      const { relayer } = await deployAndSetup();
+      const maxPriorityFee = await relayer.read.maxPriorityFee();
 
-      // This address is not relevant
-      const random_address = relayer.address;
+      const randomAddress = relayer.address; // any address
 
-      await expect(
-        relayer.relay(random_address, "0x", ethers.constants.AddressZero, {
-          maxPriorityFeePerGas: maxPriorityFee.add(1),
-        })
-      ).to.be.revertedWith("maxPriorityFee is higher than expected");
+      await viem.assertions.revertWith(
+        relayer.write.relay([randomAddress, "0x", zeroAddress], {
+          account: owner.account,
+          maxPriorityFeePerGas: maxPriorityFee + 1n,
+        }),
+        "maxPriorityFee is higher than expected",
+      );
     });
 
     it("Should relay a Safe transaction", async function () {
-      const { relayer, erc20Token, owner, otherAccount, relayerAccount } =
-        await loadFixture(deployContractFixture);
-      const GnosisSafe = await ethers.getContractFactory("ExampleGnosisSafe");
-      const gnosisSafe = await GnosisSafe.deploy({ gasLimit: 10000000 });
-      // Don't use proxies for testing
-      expect(await gnosisSafe.getThreshold()).to.equal(0);
-      await gnosisSafe.setup(
-        [owner.address],
-        1,
-        ethers.constants.AddressZero,
+      const { erc20Token, relayer } = await deployAndSetup();
+
+      const gnosisSafe = await viem.deployContract("ExampleGnosisSafe", []);
+      assert.equal(await gnosisSafe.read.getThreshold(), 0n);
+      await gnosisSafe.write.setup([
+        [owner.account.address],
+        1n,
+        zeroAddress,
         "0x",
-        ethers.constants.AddressZero,
-        ethers.constants.AddressZero,
-        0,
-        ethers.constants.AddressZero
-      );
+        zeroAddress,
+        zeroAddress,
+        0n,
+        zeroAddress,
+      ]);
 
-      // Send some ether to the Safe
-      const amount = ethers.utils.parseEther("1");
-      await expect(
-        await owner.sendTransaction({ to: gnosisSafe.address, value: amount })
-      ).to.changeEtherBalance(gnosisSafe.address, amount);
+      // Fund Safe with ether
+      const amountEth = parseEther("1");
+      await owner.sendTransaction({ to: gnosisSafe.address, value: amountEth });
 
-      // Send payment tokens to the Safe
-      await erc20Token.transfer(
-        gnosisSafe.address,
-        ethers.utils.parseEther("1")
-      );
+      // Fund Safe with payment tokens
+      await erc20Token.write.transfer([gnosisSafe.address, parseEther("1")]);
 
       // Craft Safe Tx to send ether out
-      const amountToSend = ethers.BigNumber.from(23);
-      const transactionHash = await gnosisSafe.getTransactionHash(
-        otherAccount.address,
+      const amountToSend = 23n;
+      const transactionHash = await gnosisSafe.read.getTransactionHash([
+        otherAccount.account.address,
         amountToSend,
         "0x",
-        0,
-        0,
-        0,
-        0,
-        ethers.constants.AddressZero,
-        ethers.constants.AddressZero,
-        0
-      );
+        0n,
+        0n,
+        0n,
+        0n,
+        zeroAddress,
+        zeroAddress,
+        0n,
+      ]);
 
-      let signature = await owner.signMessage(
-        ethers.utils.arrayify(transactionHash)
-      );
-      // Increase v by 4
+      // Owner signs the tx hash (eth_sign)
+      let signature = await owner.signMessage({
+        account: owner.account,
+        message: { raw: transactionHash },
+      });
+      // bump v by 4 per Safe's signature scheme
       const v = parseInt("0x" + signature.slice(-2)) + 4;
       signature = signature.slice(0, -2) + v.toString(16);
 
-      const { data } = await gnosisSafe.populateTransaction.execTransaction(
-        otherAccount.address,
-        amountToSend,
-        "0x",
-        0,
-        0,
-        0,
-        0,
-        ethers.constants.AddressZero,
-        ethers.constants.AddressZero,
-        signature
-      );
+      const data = encodeFunctionData({
+        abi: gnosisSafe.abi,
+        functionName: "execTransaction",
+        args: [
+          otherAccount.account.address,
+          amountToSend,
+          "0x",
+          0n,
+          0n,
+          0n,
+          0n,
+          zeroAddress,
+          zeroAddress,
+          signature as `0x${string}`,
+        ],
+      });
 
-      const dataWithoutMethod = "0x" + data?.slice(10);
+      const dataWithoutMethod = ("0x" + data.slice(10)) as `0x${string}`;
 
-      await expect(
-        relayer.relay(
+      await viem.assertions.revertWithCustomError(
+        relayer.write.relay([
           gnosisSafe.address,
           dataWithoutMethod,
-          ethers.constants.AddressZero
-        )
-      ).to.be.revertedWith("ERC20: insufficient allowance");
+          zeroAddress,
+        ]),
+        erc20Token,
+        "ERC20InsufficientAllowance",
+      );
 
       // Approve token from the Safe (impersonating)
-      await impersonateAccount(gnosisSafe.address);
-      const safeSigner = await ethers.provider.getSigner(gnosisSafe.address);
-      await erc20Token
-        .connect(safeSigner)
-        .approve(relayer.address, ethers.utils.parseEther("1"));
+      await testClient.impersonateAccount({ address: gnosisSafe.address });
+      await erc20Token.write.approve([relayer.address, parseEther("1")], {
+        account: gnosisSafe.address,
+      });
 
-      // Init relayer weth storage with 1 wei so gas fees are not
-      // really high for storage initialization
-      await erc20Token.transfer(relayerAccount.address, "1");
+      // Init relayer token storage with 1 wei
+      await erc20Token.write.transfer([relayerAccount.account.address, 1n]);
 
-      // If transaction is executed and relayed, `amountToSend` ether will be sent from Safe to `otherAccount`
-      const safeBalanceBefore = await ethers.provider.getBalance(
-        gnosisSafe.address
+      const safeBalanceBefore = await publicClient.getBalance({
+        address: gnosisSafe.address,
+      });
+      const otherAccountBalanceBefore = await publicClient.getBalance({
+        address: otherAccount.account.address,
+      });
+      const safeWethBefore = await erc20Token.read.balanceOf([
+        gnosisSafe.address,
+      ]);
+      const relayerWethBefore = await erc20Token.read.balanceOf([
+        relayerAccount.account.address,
+      ]);
+
+      assert.equal(relayerWethBefore, 1n);
+
+      const hash = await relayer.write.relay(
+        [gnosisSafe.address, dataWithoutMethod, zeroAddress],
+        { account: relayerAccount.account },
       );
-      const otherAccountBalanceBefore = await ethers.provider.getBalance(
-        otherAccount.address
-      );
-      const safeWethBefore = await erc20Token.balanceOf(gnosisSafe.address);
-      const relayerWethBefore = await erc20Token.balanceOf(
-        relayerAccount.address
-      );
+      const receipt = await publicClient.getTransactionReceipt({ hash });
 
-      // 1 wei on the relayer
-      expect(relayerWethBefore).to.be.eq(1);
-
-      const tx = await relayer
-        .connect(relayerAccount)
-        .relay(
-          gnosisSafe.address,
-          dataWithoutMethod,
-          ethers.constants.AddressZero
-        );
-      const receipt = await tx.wait();
-
-      expect(await ethers.provider.getBalance(gnosisSafe.address)).to.be.equal(
-        safeBalanceBefore.sub(amountToSend)
+      assert.equal(
+        await publicClient.getBalance({ address: gnosisSafe.address }),
+        safeBalanceBefore - amountToSend,
       );
-      expect(
-        await ethers.provider.getBalance(otherAccount.address)
-      ).to.be.equal(otherAccountBalanceBefore.add(amountToSend));
-      expect(await erc20Token.balanceOf(gnosisSafe.address)).to.be.lessThan(
-        safeWethBefore
+      assert.equal(
+        await publicClient.getBalance({
+          address: otherAccount.account.address,
+        }),
+        otherAccountBalanceBefore + amountToSend,
+      );
+      assert(
+        (await erc20Token.read.balanceOf([gnosisSafe.address])) <
+          safeWethBefore,
       );
 
       // Check relayer was refunded a fair amount
-      expect(
-        await erc20Token.balanceOf(relayerAccount.address)
-      ).to.be.greaterThan(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+      const relayerWethAfter = await erc20Token.read.balanceOf([
+        relayerAccount.account.address,
+      ]);
+      assert(
+        relayerWethAfter > receipt.gasUsed * (receipt.effectiveGasPrice ?? 0n),
+      );
 
-      // If Safe transaction is not valid, everything should revert and no funds must be transferred
-      // Use same transaction again
-      await expect(
-        relayer.relay(
+      // If Safe transaction is not valid, it should revert
+      await viem.assertions.revertWith(
+        relayer.write.relay([
           gnosisSafe.address,
           dataWithoutMethod,
-          ethers.constants.AddressZero
-        )
-      ).to.be.revertedWith("Could not successfully call target");
+          zeroAddress,
+        ]),
+        "Could not successfully call target",
+      );
     });
   });
 });

@@ -1,32 +1,34 @@
-![CI](https://github.com/Uxio0/relayer-contracts/actions/workflows/ci.yml/badge.svg)
-
-# Safe Relayer contract
+# Safe Relayer contract (Hardhat 3 Beta)
 
 Relay Safe transactions using allowances for refunding.
 
-Address `0x569212Bc7D93F6B64aE922101BaE91d526A2913b`. Currently deployed on:
+## Deployments
 
-- [Goerli](https://goerli.etherscan.io/address/0x569212Bc7D93F6B64aE922101BaE91d526A2913b)
+Expected address: `0x8187d0Fb94B91EFD5cC30392bfEf7a63513c5d1F`
 
-# Set up for development
+- [Sepolia](https://sepolia.etherscan.io/address/0x8187d0Fb94B91EFD5cC30392bfEf7a63513c5d1F)
+
+## Usage
+
+### Running Tests
+
+To run all the tests in the project, execute the following command:
 
 ```shell
-yarn
-yarn run prepare
+npx hardhat test
 ```
 
-# Running tests
+You can also selectively run the Solidity or `node:test` tests:
 
 ```shell
-REPORT_GAS=true npx hardhat test
+npx hardhat test solidity
+npx hardhat test nodejs
 ```
 
-# Deploying contracts
+### Example deployment to Sepolia
 
 ```shell
-export PRIVATE_KEY=''
-export ETHERSCAN_API_KEY=''
-npx hardhat deploy --network goerli
-npx hardhat sourcify
-npx hardhat etherscan-verify --api-key $ETHERSCAN_API_KEY
+export SEPOLIA_RPC_URL='https://sepolia.gateway.tenderly.co'
+export SEPOLIA_PRIVATE_KEY='0x...'
+npx hardhat run scripts/deploy.ts --network sepolia
 ```
