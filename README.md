@@ -1,3 +1,4 @@
+[![relayer-contracts](https://github.com/Uxio0/relayer-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/Uxio0/relayer-contracts/actions/workflows/ci.yml)
 # Safe Relayer contract (Hardhat 3 Beta)
 
 Relay Safe transactions using allowances for refunding.
