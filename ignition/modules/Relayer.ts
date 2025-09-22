@@ -1,6 +1,5 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-
 export default buildModule("RelayerModule", (m) => {
   const token = m.getParameter<string>("tokenAddress");
   const maxPriorityFee = m.getParameter<bigint>("maxPriorityFee");

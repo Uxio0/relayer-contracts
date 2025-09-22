@@ -1,14 +1,14 @@
 import hre from "hardhat";
 import RelayerModule from "../ignition/modules/Relayer.js";
-import { parseGwei } from "viem";
+import { Address, parseGwei } from "viem";
 
 interface ChainConfiguration {
-  tokenAddress: string;
+  tokenAddress: Address;
   maxPriorityFee: bigint;
   relayerFee: bigint;
 }
 
-const chainConfigurations: { [index: number]: ChainConfiguration } = {
+const chainConfigurations: Record<number, ChainConfiguration> = {
   4: {
     tokenAddress: "0xc778417E063141139Fce010982780140Aa0cD5Ab",
     maxPriorityFee: parseGwei("2"),
@@ -40,7 +40,7 @@ async function main() {
   const connection = await hre.network.connect();
   const viemClient = await connection.viem.getPublicClient();
   const chainId = await viemClient.getChainId();
-  const chainConfiguration: any = chainConfigurations[chainId];
+  const chainConfiguration = chainConfigurations[chainId];
   if (chainConfiguration === undefined) {
     console.log(`chainId ${chainId} configuration not defined`);
   } else {

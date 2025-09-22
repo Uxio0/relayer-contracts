@@ -14,8 +14,8 @@ jobs:
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
       - run: npm i
-      # - run: npx prettier --check .
-      # - run: npx eslint .
+      - run: npx prettier --check .
+      - run: npx eslint .
       - run: npx hardhat test
       - name: Test deployment script
         run: npx hardhat run scripts/deploy.ts
