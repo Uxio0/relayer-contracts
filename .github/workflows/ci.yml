@@ -17,3 +17,5 @@ jobs:
       # - run: npx prettier --check .
       # - run: npx eslint .
       - run: npx hardhat test
+      - name: Test deployment script
+        run: npx hardhat run scripts/deploy.ts
