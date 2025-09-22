@@ -9,7 +9,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: 'npm'
+          cache: "npm"
       - run: npm i
       - run: npx prettier --check .
       - run: npx eslint .
